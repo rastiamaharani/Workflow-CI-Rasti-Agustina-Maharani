@@ -1,0 +1,17 @@
+name: credit-scoring-env
+
+channels:
+  - conda-forge
+
+dependencies:
+  - python=3.12
+  - pip
+  - pip:
+      - mlflow==2.19.0
+      - dagshub
+      - pandas
+      - numpy
+      - scikit-learn
+      - matplotlib
+      - seaborn
+      - joblib
