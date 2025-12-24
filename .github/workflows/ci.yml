@@ -21,31 +21,31 @@ jobs:
       - name: Install MLflow + deps
         run: |
           python -m pip install --upgrade pip
-          pip install mlflow==2.19.0 dagshub pandas numpy scikit-learn matplotlib seaborn joblib
+          pip install mlflow==2.19.0 pandas numpy scikit-learn matplotlib seaborn joblib
 
       - name: Run MLflow Project (Training)
         env:
-          DAGSHUB_REPO_OWNER: rastiamaharani
-          DAGSHUB_REPO_NAME: msml-credit-scoring
           MLFLOW_EXPERIMENT_NAME: credit_scoring_ci
           DO_TUNING: "1"
           TARGET_COL: "Y"
         run: |
           cd MLProject
           mlflow run . --env-manager=local
+          echo "=== last_run_id.txt ==="
+          cat last_run_id.txt
 
-      - name: Build Docker Image with MLflow (from latest run)
+      - name: Build Docker Image with MLflow (from last_run_id.txt)
         run: |
           cd MLProject
-          RUN_ID=$(ls -td mlruns/*/*/ | head -n 1 | awk -F'/' '{print $(NF-2)}')
-          echo "Latest RUN_ID: $RUN_ID"
+          RUN_ID=$(cat last_run_id.txt)
+          echo "Using RUN_ID: $RUN_ID"
           mlflow models build-docker -m "runs:/$RUN_ID/model" -n credit-scoring-mlflow
 
       - name: Login to Docker Hub
         run: |
-          echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
+          echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
 
       - name: Tag & Push Docker Image
         run: |
-          docker tag credit-scoring-mlflow ${{ secrets.DOCKERHUB_USERNAME }}/credit-scoring-mlflow:latest
-          docker push ${{ secrets.DOCKERHUB_USERNAME }}/credit-scoring-mlflow:latest
+          docker tag credit-scoring-mlflow "${{ secrets.DOCKERHUB_USERNAME }}/credit-scoring-mlflow:latest"
+          docker push "${{ secrets.DOCKERHUB_USERNAME }}/credit-scoring-mlflow:latest"
