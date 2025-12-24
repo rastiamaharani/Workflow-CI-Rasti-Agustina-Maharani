@@ -31,16 +31,26 @@ jobs:
           TARGET_COL: "Y"
         run: |
           cd MLProject
-          mlflow run . --env-manager=local
-          echo "=== last_run_id.txt ==="
-          cat last_run_id.txt
+          mlflow run . --env-manager=local | tee run.log
 
-      - name: Build Docker Image with MLflow (from last_run_id.txt)
+          # Ambil RUN_ID dari log mlflow run
+          RUN_ID=$(grep -oP "run with ID '\K[0-9a-f]{32}(?='" run.log | tail -n 1)
+
+          if [ -z "$RUN_ID" ]; then
+            echo "ERROR: RUN_ID tidak ketemu dari output mlflow run"
+            echo "=== run.log ==="
+            cat run.log
+            exit 1
+          fi
+
+          echo "Using RUN_ID: $RUN_ID"
+          echo "RUN_ID=$RUN_ID" >> $GITHUB_ENV
+
+      - name: Build Docker Image with MLflow
         env:
           MLFLOW_TRACKING_URI: file:${{ github.workspace }}/MLProject/mlruns
         run: |
           cd MLProject
-          RUN_ID=$(cat last_run_id.txt)
           echo "Using RUN_ID: $RUN_ID"
           mlflow models build-docker -m "runs:/$RUN_ID/model" -n credit-scoring-mlflow
 
